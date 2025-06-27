@@ -1,89 +1,38 @@
-```markdown
-# 🎙️ VoxPay - AI Voice-Enabled Money Transfers
+# 🎙️ VoxForm - AI-Powered Form Assistant
 
-![Project Banner](https://via.placeholder.com/1200x400?text=VoicePay+-+Secure+Voice-Activated+Transfers)
-*A secure, voice-controlled interface for seamless money transfers*
+![Demo GIF](https://via.placeholder.com/800x400?text=VoxForm+Demo+-+Speak+to+Fill+Forms)
+
+> *"Your voice is the shortest path between thought and form"*
 
 ## ✨ Features
 
-- **Natural Language Processing**  
-  "Transfer $500 to Mom for groceries" → Auto-filled form
-- **Bank-Grade Security**  
-  Voice authentication + confirmation steps
-- **Multi-Currency Support**  
-  Supports USD, EUR, NGN, and 20+ currencies
-- **Transaction History**  
-  Voice queries like "Show last transfer to Amazon"
-- **Accessibility Focused**  
-  Fully operable via voice commands
+- **Voice-to-Form**  
+  Speak naturally to auto-fill form fields ("Transfer ₦50,000 to Jane Doe at Zenith Bank")
+- **Smart Field Mapping**  
+  AI identifies recipient names, amounts, account numbers, and reference notes
+- **Confirmation Flow**  
+  Verbal verification before submission ("Did you say ₦15,000 to John?")
+- **Context Awareness**  
+  Remembers previous field values during multi-step forms
+- **Privacy Focused**  
+  No payment processing - works with your existing backend
 
 ## 🛠️ Tech Stack
 
 **Frontend**  
 - Next.js 15 (App Router)  
-- Tailwind CSS  
+- Tailwind CSS + ShadCN UI  
 - Web Speech API  
 
-**Backend**  
-- Node.js  
-- OpenAI GPT-4  
-- Redis (Rate Limiting)  
+**AI Service**  
+- OpenAI GPT-4 (Field extraction)  
 
-**Security**  
-- JWT Authentication  
-- TLS 1.3 Encryption  
+**Utility**  
+- Zod (Form validation)  
+- Redis (Request Caching & Rate limiting)  
 
-## 🚀 Quick Start
+## 🚀 Setup (Next.js)
 
-1. **Clone Repo**
+1. **Clone repository**
    ```bash
-   git clone https://github.com/MindInitiatives/VoxPay.git
-   cd voxpay
-   ```
-
-2. **Install Dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Configure Environment**  
-   Create `.env` file:
-   ```env
-   OPENAI_API_KEY=your_key
-   REDIS_URL=your_redis_url
-   NEXT_PUBLIC_BANK_API_URL=your_bank_api
-   ```
-
-4. **Run Development Server**
-   ```bash
-   npm run dev
-   ```
-
-## 🎤 Voice Command Examples
-
-| Command | Action |
-|---------|--------|
-| "Send $200 to John Doe" | Fills recipient/amount |
-| "Use account ending 1234" | Selects payment source |
-| "Add memo 'Birthday gift'" | Appends transaction note |
-| "Confirm transfer" | Executes transaction |
-
-## 📚 Documentation
-
-- [API Reference](/docs/API.md)
-- [Security Model](/docs/SECURITY.md)
-- [Voice Grammar Guide](/docs/VOICE_COMMANDS.md)
-
-## 🌟 Why VoxPay?
-
-✔ **87% faster** than manual form entry  
-✔ **Hands-free** operation while multitasking  
-✔ **Error reduction** with AI validation  
-
-## 📜 License
-
-MIT © 2025 [Stephen Oloto]
-
----
-**Ready to speak your transfers?** [Contact Us](mailto:steevyn51@gmail.com)
-```
+   git clone https://github.com/MindInitiatives/VoxForm.git
