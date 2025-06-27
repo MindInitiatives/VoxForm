@@ -1,6 +1,6 @@
 # 🎙️ VoxForm - AI-Powered Form Assistant
 
-![Demo GIF](https://via.placeholder.com/800x400?text=VoxForm+Demo+-+Speak+to+Fill+Forms)
+![Demo](/public/images/banner.png)
 
 > *"Your voice is the shortest path between thought and form"*
 
