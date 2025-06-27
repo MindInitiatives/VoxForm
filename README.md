@@ -1,5 +1,3 @@
-Here's a professional **README.md** for your AI Voice-Enabled Transfer project (using "VoxPay" as the project name):
-
 ```markdown
 # 🎙️ VoxPay - AI Voice-Enabled Money Transfers
 
