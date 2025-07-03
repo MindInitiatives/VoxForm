@@ -25,7 +25,7 @@
 - Web Speech API  
 
 **AI Service**  
-- OpenAI GPT-4 (Field extraction)  
+- OpenAI GPT-4 and GeminiAI (Field extraction)  
 
 **Utility**  
 - Zod (Form validation)  
