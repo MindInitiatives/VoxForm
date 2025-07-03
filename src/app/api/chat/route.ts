@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getAIClient } from '@/lib/ai/getAIClient';
 import { NextResponse } from 'next/server';
 import { createClient } from 'redis';
@@ -28,12 +27,12 @@ const redis = createClient({
 // Type definitions
 interface ApiRequest {
   command: string;
-  currentState?: Record<string, any>;
+  currentState?: Record<string, unknown>;
   sessionId?: string;
 }
 
 interface ApiResponse {
-  fieldUpdates?: Record<string, any>;
+  fieldUpdates?: Record<string, unknown>;
   confirmation?: string;
   intent?: string;
   requiresConfirmation?: boolean;
@@ -109,7 +108,7 @@ export async function POST(request: Request) {
         // response = await withRetry(() => ai.extractFields(command));
         break;
       case 'focus_field':
-        response = await ai.focusField(command, currentState);
+        response = await ai.focusField(command, currentState ?? {}) as ApiResponse;
         // response = await withRetry(() => ai.focusField(command, currentState));
         break;
       case 'submit_form':
@@ -154,15 +153,15 @@ export async function POST(request: Request) {
 // }
 
 // Error handler
-function handleApiError(error: any) {
-  if (error?.status === 429) {
+function handleApiError(error: unknown) {
+  if (typeof error === 'object' && error !== null && 'status' in error && (error as { status?: number }).status === 429) {
     return NextResponse.json(
       { confirmation: "I'm getting too many requests. Please wait a moment and try again.", error: 'rate_limit' },
       { status: 429 }
     );
   }
   
-  if (error?.code === 'ENOTFOUND') {
+  if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'ENOTFOUND') {
     return NextResponse.json(
       { confirmation: "I'm having trouble connecting to the service. Please check your internet connection.", error: 'network_error' },
       { status: 503 }
