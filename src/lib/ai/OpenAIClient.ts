@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { OpenAI } from 'openai';
 import { AIClient } from './AIClient';
 import { fieldToLabel, generateConfirmation } from '../utils/string-helper';

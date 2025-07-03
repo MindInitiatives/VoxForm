@@ -11,6 +11,7 @@ export const fieldToLabel = (field: string): string =>  {
   return labels[field] || field;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const generateConfirmation = (updates: any): string => {
   const parts = [];
   if (updates.amount) parts.push(`Amount: ₦${Number(updates.amount).toLocaleString('en-NG')}`);
@@ -40,25 +41,8 @@ export const extractAndParseJSON = (markdownString: string) => {
     console.error('Failed to parse JSON:', {
       original: markdownString,
       cleaned: jsonString,
-      error: e.message
+      error: e instanceof Error ? e.message : String(e)
     });
     throw new Error('Invalid JSON format in Markdown');
   }
-}
-
-// Example usage
-const markdownInput = 
-`\`\`\`json
-{
-  "amount": "1,27",
-  "bankName": "GTB"
-}
-\`\`\``;
-
-try {
-  const result = extractAndParseJSON(markdownInput);
-  console.log(result);
-  // Output: { amount: 1.27, bankName: "GTB" }
-} catch (e) {
-  console.error('Error:', e.message);
 }

@@ -49,6 +49,7 @@ export const useAudioRecorder = () => {
   const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [speechRecognition, setSpeechRecognition] = useState<SpeechRecognitionInstance | null>(null);
@@ -173,6 +174,7 @@ export const useAudioRecorder = () => {
   }, [mediaRecorder, audioChunks, speechRecognition]);
 
   // Function to send audio to a real STT API
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
     // Here you would integrate with a real speech-to-text API
     // Example using a hypothetical API endpoint:

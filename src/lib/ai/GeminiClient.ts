@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AIClient } from './AIClient';
-import { extractAndParseJSON, fieldToLabel, generateConfirmation, preprocessJSON } from '../utils/string-helper';
+import { extractAndParseJSON, fieldToLabel, generateConfirmation } from '../utils/string-helper';
 import { PROMPTS } from '../nlp/prompts';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -69,8 +70,13 @@ export class GeminiClient implements AIClient {
 
     } catch (e) {
       console.error('Gemini JSON parsing failed:', jsonString);
-      console.error('Parse error at position', e.position);
-      console.error('Near:', jsonString.slice(e.position - 20, e.position + 20));
+      if (typeof e === 'object' && e !== null && 'position' in e) {
+        const pos = (e as { position: number }).position;
+        console.error('Parse error at position', pos);
+        console.error('Near:', jsonString.slice(pos - 20, pos + 20));
+      } else {
+        console.error('Parse error:', e);
+      }
       throw new Error('Failed to parse Gemini response');
     }
   }

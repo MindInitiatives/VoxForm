@@ -64,7 +64,7 @@ export const validateTransferRequest = (
         errors.amount = 'Minimum transfer amount is $1';
         isValid = false;
       }
-    } catch (error) {
+    } catch {
       errors.amount = 'Invalid amount format';
       isValid = false;
     }
@@ -134,12 +134,12 @@ const fieldToLabel = (field: string): string => {
 /**
  * Validates API response structure
  */
-export const validateApiResponse = (response: any): response is ApiResponse => {
+export const validateApiResponse = (response: unknown): response is ApiResponse => {
   return (
     typeof response === 'object' &&
     response !== null &&
     'success' in response &&
-    typeof response.success === 'boolean'
+    typeof (response as ApiResponse).success === 'boolean'
   );
 };
 

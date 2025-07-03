@@ -143,6 +143,7 @@ export async function POST(request: Request) {
 }
 
 // Retry wrapper
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
   try {
     return await fn();

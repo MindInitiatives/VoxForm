@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { TransferFormData } from '@/types';
 
 export const sanitizeInput = (data: any): TransferFormData => {
