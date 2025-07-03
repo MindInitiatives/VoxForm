@@ -1,13 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { TransferFormData } from '@/types';
 
-export const sanitizeInput = (data: any): TransferFormData => {
-  const sanitized: any = {};
+export const sanitizeInput = (data: Record<string, unknown>): TransferFormData => {
+  const sanitized: Record<string, unknown> = {};
   
   for (const key in data) {
     if (typeof data[key] === 'string') {
       // Basic XSS protection
-      sanitized[key] = data[key]
+      sanitized[key] = (data[key] as string)
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .trim();

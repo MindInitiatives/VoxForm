@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -145,11 +144,24 @@ const BankTransferForm = () => {
       // If activeFieldValue is an object with multiple fields, set them all
       if (activeFieldValue && typeof activeFieldValue === 'object' && !Array.isArray(activeFieldValue)) {
         Object.entries(activeFieldValue).forEach(([key, value]) => {
-          form.setValue(key as keyof TransferFormValues, value as any);
+          form.setValue(
+            key as keyof TransferFormValues,
+            value as TransferFormValues[keyof TransferFormValues]
+          );
         });
-      } else if (activeField && activeFieldValue !== undefined) {
+      } else if (activeField && activeFieldValue !== undefined && activeFieldValue !== null) {
         // Otherwise, set only the active field
-        form.setValue(activeField as keyof TransferFormValues, activeFieldValue as any);
+        if (activeField === 'termsAccepted') {
+          // Only allow true for termsAccepted due to z.literal(true)
+          if (activeFieldValue === true) {
+            form.setValue('termsAccepted', true);
+          }
+        } else {
+          form.setValue(
+            activeField as keyof TransferFormValues,
+            activeFieldValue as TransferFormValues[keyof TransferFormValues]
+          );
+        }
       }
     }
   }, [activeField, activeFieldValue]);

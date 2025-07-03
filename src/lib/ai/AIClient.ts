@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface AIClient {
   classifyIntent(command: string): Promise<string>;
-  extractFields(command: string): Promise<any>;
-  focusField(command: string, currentState: any): Promise<any>;
+  extractFields(command: string): Promise<Record<string, unknown>>;
+  focusField(command: string, currentState: Record<string, unknown>): Promise<unknown>;
 }

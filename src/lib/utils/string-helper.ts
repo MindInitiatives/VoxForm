@@ -11,8 +11,15 @@ export const fieldToLabel = (field: string): string =>  {
   return labels[field] || field;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const generateConfirmation = (updates: any): string => {
+type UpdateFields = {
+  amount?: string | number;
+  recipientName?: string;
+  recipientAccount?: string;
+  bankName?: string;
+  [key: string]: unknown;
+};
+
+export const generateConfirmation = (updates: UpdateFields): string => {
   const parts = [];
   if (updates.amount) parts.push(`Amount: ₦${Number(updates.amount).toLocaleString('en-NG')}`);
   if (updates.recipientName) parts.push(`Recipient: ${updates.recipientName}`);

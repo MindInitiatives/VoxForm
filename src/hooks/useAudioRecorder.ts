@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from 'react';
 import { VOICE_CONFIG } from '@/config/voice';
 
@@ -9,6 +8,7 @@ declare global {
   interface Window {
     SpeechRecognition: new () => SpeechRecognition;
     webkitSpeechRecognition: new () => SpeechRecognition;
+    webkitAudioContext: new () => AudioContext;
   }
 }
 
@@ -106,7 +106,7 @@ export const useAudioRecorder = () => {
       setMediaRecorder(recorder);
 
       // Audio analysis setup
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioCtx = new ((window.AudioContext || window.webkitAudioContext))();
       setAudioContext(audioCtx);
       
       const analyserNode = audioCtx.createAnalyser();
@@ -200,7 +200,7 @@ export const useAudioRecorder = () => {
     return new Promise((resolve) => {
       // Extend window type to include SpeechRecognition and webkitSpeechRecognition
       const SpeechRecognitionConstructor =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        window.SpeechRecognition || window.webkitSpeechRecognition;
         console.log(SpeechRecognitionConstructor);
         
       if (SpeechRecognitionConstructor) {

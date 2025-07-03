@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AIClient } from './AIClient';
 import { extractAndParseJSON, fieldToLabel, generateConfirmation } from '../utils/string-helper';
@@ -33,7 +32,7 @@ export class GeminiClient implements AIClient {
     return response.toLowerCase();
   }
 
-  async extractFields(command: string): Promise<any> {
+  async extractFields(command: string): Promise<{ fieldUpdates: Record<string, string>, confirmation: string }> {
     const prompt = PROMPTS.fieldExtraction
                 .replace('{command}', command);
     console.log(prompt);
@@ -81,7 +80,7 @@ export class GeminiClient implements AIClient {
     }
   }
 
-  async focusField(command: string, currentState: any): Promise<any> {
+  async focusField(command: string, currentState: Record<string, string>): Promise<{ confirmation: string; fieldUpdates: Record<string, string> }> {
     const prompt = `
         From the following command, identify the field being referred to:
         Options: recipientName, recipientAccount, bankName, amount, reference

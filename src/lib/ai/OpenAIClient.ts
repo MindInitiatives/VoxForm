@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { OpenAI } from 'openai';
 import { AIClient } from './AIClient';
 import { fieldToLabel, generateConfirmation } from '../utils/string-helper';
@@ -19,7 +18,7 @@ export class OpenAIClient implements AIClient {
     return res.choices[0]?.message?.content?.trim() || 'unknown';
   }
 
-  async extractFields(command: string): Promise<any> {
+  async extractFields(command: string): Promise<Record<string, unknown>> {
     const res = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
@@ -53,7 +52,7 @@ export class OpenAIClient implements AIClient {
     };
   }
 
-  async focusField(command: string, currentState: any): Promise<any> {
+  async focusField(command: string, currentState: Record<string, string>): Promise<{ confirmation: string; fieldUpdates: Record<string, string> }> {
     const res = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
