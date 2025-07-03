@@ -5,7 +5,7 @@ export const processVoiceCommand = async (
   currentState?: Partial<FormState>,
   sessionId?: string
 ): Promise<ProcessResult> => {
-  console.log(command);
+  console.log(command, 'the command here');
   
   try {
     const response = await fetch('/api/chat', {
@@ -23,12 +23,12 @@ export const processVoiceCommand = async (
           confirmation: "You're sending requests too quickly. Please wait a moment."
         };
       }
-      throw new Error(`API request failed with status ${response.status}`);
+      // throw new Error(`API request failed with status ${response.status}`);
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error processing command:', error);
+    console.error('Error processing command in processor:', error);
     return {
       confirmation: "I'm having trouble connecting to the service. Please try again.",
       error: error instanceof Error ? error.message : 'network_error'

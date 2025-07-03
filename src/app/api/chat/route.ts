@@ -1,15 +1,16 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { getAIClient } from '@/lib/ai/getAIClient';
 import { NextResponse } from 'next/server';
-import { OpenAI } from 'openai';
 import { createClient } from 'redis';
 
-const port = Number(process.env.REDIS_PORT);
+// const port = Number(process.env.REDIS_PORT);
 
 const redis = createClient({
     username: process.env.REDIS_USERNAME,
     password: process.env.REDIS_PASSWORD,
     socket: {
         host: process.env.REDIS_HOST,
-        port: port
+        port: 18581
     }
 });
 
@@ -17,16 +18,12 @@ const redis = createClient({
 (async () => {
   try {
     await redis.connect();
+    // await withRetry(() => redis.connect());
     console.log('Connected to Redis');
   } catch (err) {
     console.error('Redis connection error:', err);
   }
 })();
-
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
 
 // Type definitions
 interface ApiRequest {
@@ -49,14 +46,12 @@ interface ApiResponse {
 const RATE_LIMIT_WINDOW = 60; // 60 seconds
 const RATE_LIMIT_MAX = 10; // 10 requests per window
 
+const ai = getAIClient();
+
 export async function POST(request: Request) {
-  console.log(request);
-  
   try {
     // Get client IP
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'anonymous';
-    
-    console.log(ip);
     
     // Rate limiting using Redis
     const rateLimitKey = `rate_limit:${ip}`;
@@ -101,35 +96,27 @@ export async function POST(request: Request) {
       return NextResponse.json(JSON.parse(cachedResponse));
     }
 
-    // Classify intent with retry
-    const intent = await withRetry(async () => {
-      const intentResponse = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: `Classify intent from: set_field, submit_form, reset_form, focus_field, help, unknown`
-          },
-          { role: 'user', content: command }
-        ],
-        temperature: 0.1,
-        max_tokens: 20
-      });
-      return intentResponse.choices[0]?.message?.content?.trim() || 'unknown';
-    });
+    const intent = await ai.classifyIntent(command); 
+    // const intent = await withRetry(() => ai.classifyIntent(command));
 
+    console.log(intent);
+    
     // Process intent
     let response: ApiResponse;
     switch (intent) {
       case 'set_field':
-        response = await withRetry(() => handleSetFieldIntent(command, currentState));
+        response = await ai.extractFields(command);
+        // response = await withRetry(() => ai.extractFields(command));
         break;
       case 'focus_field':
-        response = await withRetry(() => handleFocusIntent(command, currentState));
+        response = await ai.focusField(command, currentState);
+        // response = await withRetry(() => ai.focusField(command, currentState));
         break;
       case 'submit_form':
         response = { requiresConfirmation: true, confirmation: 'Confirm transfer? Say "confirm" to proceed.' };
         break;
+      // case 'transfer':
+      //   response = { confirmation: 'This will initiate the transfer.' };
       case 'reset_form':
         response = { confirmation: 'This will clear all form data. Say "confirm" to reset.' };
         break;
@@ -142,7 +129,7 @@ export async function POST(request: Request) {
 
     // Cache successful responses (5 minutes)
     if (!response.error) {
-      await redis.set(cacheKey, JSON.stringify(response), 'EX', 300);
+      await redis.set(cacheKey, JSON.stringify(response), { 'EX': 300 });
     }
 
     // Log processing
@@ -166,65 +153,6 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Pr
   }
 }
 
-// Handle set field intent
-async function handleSetFieldIntent(command: string, currentState: any) {
-  const response = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
-    messages: [
-      {
-        role: 'system',
-        content: `Extract Nigerian banking transfer details. Respond with JSON. Example: {"amount":"5000","recipientName":"John Doe"}`
-      },
-      { role: 'user', content: command }
-    ],
-    temperature: 0.1,
-    response_format: { type: 'json_object' }
-  });
-
-  const content = response.choices[0]?.message?.content;
-  if (!content) throw new Error('No content in response');
-
-  const updates = JSON.parse(content);
-  
-  // Validate data
-  if (updates.amount && !updates.currency) {
-    updates.currency = 'NGN';
-  }
-
-  if (updates.recipientAccount && !/^\d{10}$/.test(updates.recipientAccount)) {
-    throw new Error('Account number must be 10 digits');
-  }
-
-  return {
-    fieldUpdates: updates,
-    confirmation: generateConfirmation(updates)
-  };
-}
-
-// Handle focus intent
-async function handleFocusIntent(command: string, currentState: any) {
-  const response = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
-    messages: [
-      {
-        role: 'system',
-        content: `Identify which field to focus on: recipientName, recipientAccount, bankName, amount, reference. Respond with ONLY the field name.`
-      },
-      { role: 'user', content: command }
-    ],
-    temperature: 0.1,
-    max_tokens: 20
-  });
-
-  const field = response.choices[0]?.message?.content?.trim();
-  if (!field) throw new Error('No field identified');
-
-  return {
-    confirmation: `Editing ${fieldToLabel(field)}`,
-    fieldUpdates: { [field]: currentState?.[field] || '' }
-  };
-}
-
 // Error handler
 function handleApiError(error: any) {
   if (error?.status === 429) {
@@ -245,26 +173,4 @@ function handleApiError(error: any) {
     { confirmation: "I'm having technical difficulties. Please try again later.", error: 'processing_error' },
     { status: 500 }
   );
-}
-
-// Helper functions
-function fieldToLabel(field: string): string {
-  const labels: Record<string, string> = {
-    recipientName: 'recipient name',
-    recipientAccount: 'account number',
-    bankName: 'bank name',
-    amount: 'amount',
-    currency: 'currency',
-    reference: 'reference',
-  };
-  return labels[field] || field;
-}
-
-function generateConfirmation(updates: any): string {
-  const parts = [];
-  if (updates.amount) parts.push(`Amount: ₦${Number(updates.amount).toLocaleString('en-NG')}`);
-  if (updates.recipientName) parts.push(`Recipient: ${updates.recipientName}`);
-  if (updates.recipientAccount) parts.push(`Account: ${updates.recipientAccount}`);
-  if (updates.bankName) parts.push(`Bank: ${updates.bankName}`);
-  return parts.length > 0 ? parts.join(', ') + '.' : 'Changes applied.';
 }

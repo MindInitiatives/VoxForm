@@ -15,7 +15,7 @@ export type TransferFormData = {
   recipientName: string;
   recipientAccount: string;
   bankName: string;
-  amount: string;
+  amount: number | string;
   currency: string;
   reference: string;
   transferDate: string;
@@ -49,6 +49,12 @@ export type FormState = {
 export interface ProcessResult {
   fieldUpdates?: Partial<FormState>;
   confirmation?: string;
+  // confirmation?: {
+  //   prompt: string;
+  //   successResponse?: string;
+  //   cancelResponse?: string;
+  //   action: () => Promise<void>;
+  // };
   intent?: string;
   requiresConfirmation?: boolean;
   error?: string;

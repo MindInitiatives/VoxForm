@@ -3,8 +3,16 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { VoiceCommand } from '@/types';
+import moment from 'moment';
+
 
 export const HistoryPanel = ({ commands }: { commands: VoiceCommand[] }) => {
+  const momentTime = (timestamp: string) => {
+    console.log(timestamp);
+    
+    return moment.unix(Number(timestamp)).format('h:mm:ss a');
+  }
+
   return (
     <div className="p-4 bg-white rounded-lg shadow">
       <h3 className="text-lg font-medium text-gray-900">Command History</h3>
@@ -30,7 +38,7 @@ export const HistoryPanel = ({ commands }: { commands: VoiceCommand[] }) => {
                 <div className="flex justify-between">
                   <span className="font-medium">"{cmd.command}"</span>
                   <span className="text-xs opacity-70">
-                    {new Date(cmd.timestamp).toLocaleTimeString()}
+                    {momentTime(cmd.timestamp)}
                   </span>
                 </div>
                 {cmd.result?.confirmation && (
