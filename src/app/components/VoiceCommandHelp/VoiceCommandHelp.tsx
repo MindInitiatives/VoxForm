@@ -1,4 +1,3 @@
-/* eslint-disable react/no-unescaped-entities */
 'use client';
 
 import { motion } from 'framer-motion';
@@ -6,64 +5,52 @@ import { useState } from 'react';
 
 const commandExamples = [
   {
-    category: 'Transfer Commands',
-    examples: [
-      "Transfer 5000 Naira to John Doe",
-      "Send 300 euros to account 12345678",
-      "Bank is GTBank",
-    ]
+    category: 'Transfer Commands', icon: '💸',
+    examples: ['Transfer 5000 Naira to John Doe', 'Send 300 euros to account 12345678', 'Bank is GTBank'],
   },
   {
-    category: 'Form Navigation',
-    examples: [
-      "Go to amount field",
-      "Focus on recipient name",
-      "Next field"
-    ]
+    category: 'Form Navigation', icon: '🧭',
+    examples: ['Go to amount field', 'Focus on recipient name', 'Next field'],
   },
   {
-    category: 'Actions',
-    examples: [
-      "Submit the transfer",
-      "Reset the form",
-      "Cancel"
-    ]
-  }
+    category: 'Actions', icon: '⚡',
+    examples: ['Submit the transfer', 'Reset the form', 'Cancel'],
+  },
 ];
 
 export const VoiceCommandHelp = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="mt-6">
+    <div>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500"
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition w-full cursor-pointer"
       >
-        {isOpen ? 'Hide' : 'Show'} voice command examples
-        <svg
-          className={`ml-1 h-5 w-5 transform transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+        <svg className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
         </svg>
+        {isOpen ? 'Hide' : 'Show'} voice command examples
       </button>
 
       <motion.div
-        initial={{ height: 0, opacity: 0 }}
+        initial={false}
         animate={{ height: isOpen ? 'auto' : 0, opacity: isOpen ? 1 : 0 }}
+        transition={{ duration: 0.2 }}
         className="overflow-hidden"
       >
-        <div className="mt-2 space-y-4">
+        <div className="mt-3 space-y-2">
           {commandExamples.map((group) => (
-            <div key={group.category}>
-              <h4 className="text-sm font-medium text-gray-900">{group.category}</h4>
-              <ul className="mt-1 space-y-1">
+            <div key={group.category} className="rounded-xl border border-border bg-muted/20 p-3">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <span>{group.icon}</span>
+                {group.category}
+              </p>
+              <ul className="space-y-1">
                 {group.examples.map((example) => (
-                  <li key={example} className="text-sm text-gray-600">
-                    • "{example}"
+                  <li key={example} className="text-xs text-muted-foreground font-mono leading-relaxed">
+                    &quot;{example}&quot;
                   </li>
                 ))}
               </ul>

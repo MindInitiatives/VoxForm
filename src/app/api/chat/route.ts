@@ -1,30 +1,14 @@
 import { getAIClient } from '@/lib/ai/getAIClient';
 import { NextResponse } from 'next/server';
-import { createClient } from 'redis';
+import { Redis } from '@upstash/redis';
 
-// const port = Number(process.env.REDIS_PORT);
-
-const redis = createClient({
-    username: process.env.REDIS_USERNAME,
-    password: process.env.REDIS_PASSWORD,
-    socket: {
-        host: process.env.REDIS_HOST,
-        port: 18581
-    }
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
 
-// Connect to Redis with error handling
-(async () => {
-  try {
-    await redis.connect();
-    // await withRetry(() => redis.connect());
-    console.log('Connected to Redis');
-  } catch (err) {
-    console.error('Redis connection error:', err);
-  }
-})();
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-// Type definitions
 interface ApiRequest {
   command: string;
   currentState?: Record<string, unknown>;
@@ -39,35 +23,40 @@ interface ApiResponse {
   error?: string;
 }
 
-// export const runtime = 'edge';
+// ─── Config ───────────────────────────────────────────────────────────────────
 
-// Rate limit configuration
-const RATE_LIMIT_WINDOW = 60; // 60 seconds
-const RATE_LIMIT_MAX = 10; // 10 requests per window
+const RATE_LIMIT_WINDOW = 60; // seconds
+const RATE_LIMIT_MAX    = 10; // requests per window
+const CACHE_TTL         = 300; // 5 minutes
+
+// ─── AI client ────────────────────────────────────────────────────────────────
 
 const ai = getAIClient();
 
+// ─── Route handler ────────────────────────────────────────────────────────────
+
 export async function POST(request: Request) {
   try {
-    // Get client IP
+
+    // ── Rate limiting ────────────────────────────────────────────────────────
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'anonymous';
-    
-    // Rate limiting using Redis
     const rateLimitKey = `rate_limit:${ip}`;
-    const current = await redis.incr(rateLimitKey);
-    
-    if (current === 1) {
-      await redis.expire(rateLimitKey, RATE_LIMIT_WINDOW);
-    }
-    
-    if (current > RATE_LIMIT_MAX) {
+
+    // Atomic pipeline: set the key with NX+EX (only on first request),
+    // then increment (eliminates the INCR/EXPIRE race condition).
+    const [[, current]] = await redis.pipeline()
+      .set(rateLimitKey, 0, { nx: true, ex: RATE_LIMIT_WINDOW })
+      .incr(rateLimitKey)
+      .exec() as [unknown, number][];
+
+    if ((current as number) > RATE_LIMIT_MAX) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
         { status: 429 }
       );
     }
 
-    // Request validation
+    // ── Content-type guard ───────────────────────────────────────────────────
     const contentType = request.headers.get('content-type');
     if (!contentType?.includes('application/json')) {
       return NextResponse.json(
@@ -75,8 +64,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    // console.log(request.json());
-    
+
     const { command, currentState, sessionId } = await request.json() as ApiRequest;
 
     if (!command?.trim()) {
@@ -86,90 +74,104 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check cache
+    // ── Cache lookup ─────────────────────────────────────────────────────────
     const cacheKey = `cache:${sessionId || 'anon'}:${command.toLowerCase().trim()}`;
-    const cachedResponse = await redis.get(cacheKey);
-    
-    if (cachedResponse) {
-      console.log('Serving from cache');
-      return NextResponse.json(JSON.parse(cachedResponse));
+
+    try {
+      const cached = await redis.get<ApiResponse>(cacheKey);
+      if (cached) {
+        console.log('[Cache] hit:', cacheKey);
+        return NextResponse.json(cached);
+      }
+    } catch (cacheErr) {
+      // Cache miss or error, continue to AI, never block the request
+      console.warn('[Cache] read failed, skipping:', cacheErr);
     }
 
-    const intent = await ai.classifyIntent(command); 
-    // const intent = await withRetry(() => ai.classifyIntent(command));
+    // ── Intent classification ────────────────────────────────────────────────
+    const intent = await ai.classifyIntent(command);
+    console.log('[Intent]', intent);
 
-    console.log(intent);
-    
-    // Process intent
+    // ── Intent routing ───────────────────────────────────────────────────────
     let response: ApiResponse;
     switch (intent) {
       case 'set_field':
         response = await ai.extractFields(command);
-        // response = await withRetry(() => ai.extractFields(command));
         break;
       case 'focus_field':
         response = await ai.focusField(command, currentState ?? {}) as ApiResponse;
-        // response = await withRetry(() => ai.focusField(command, currentState));
         break;
       case 'submit_form':
-        response = { requiresConfirmation: true, confirmation: 'Confirm transfer? Say "confirm" to proceed.' };
+        response = {
+          requiresConfirmation: true,
+          confirmation: 'Confirm transfer? Say "confirm" to proceed.',
+        };
         break;
-      // case 'transfer':
-      //   response = { confirmation: 'This will initiate the transfer.' };
       case 'reset_form':
-        response = { confirmation: 'This will clear all form data. Say "confirm" to reset.' };
+        response = {
+          confirmation: 'This will clear all form data. Say "confirm" to reset.',
+        };
         break;
       case 'help':
-        response = { confirmation: 'Try: "Transfer 5000 NGN to John Doe", "Account 12345678", or "Submit"' };
+        response = {
+          confirmation: 'Try: "Transfer 5000 NGN to John Doe", "Account 12345678", or "Submit"',
+        };
         break;
       default:
-        response = { confirmation: "I didn't understand that. Please try again or say 'help'." };
+        response = {
+          confirmation: "I didn't understand that. Please try again or say 'help'.",
+        };
     }
 
-    // Cache successful responses (5 minutes)
+    // ── Cache write ──────────────────────────────────────────────────────────
     if (!response.error) {
-      await redis.set(cacheKey, JSON.stringify(response), { 'EX': 300 });
+      try {
+        // Upstash get() auto-parses JSON, so store the object directly
+        await redis.set(cacheKey, response, { ex: CACHE_TTL });
+      } catch (cacheErr) {
+        console.warn('[Cache] write failed:', cacheErr);
+      }
     }
 
-    // Log processing
-    console.log(`Processed command: ${command}`, { intent, sessionId });
-
+    console.log(`[Command] processed: "${command}"`, { intent, sessionId });
     return NextResponse.json(response);
+
   } catch (error) {
-    console.error('Error processing command:', error);
+    console.error('[Route] unhandled error:', error);
     return handleApiError(error);
   }
 }
 
-// Retry wrapper
-// async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
-//   try {
-//     return await fn();
-//   } catch (error) {
-//     if (retries <= 0) throw error;
-//     await new Promise(resolve => setTimeout(resolve, delay));
-//     return withRetry(fn, retries - 1, delay * 2);
-//   }
-// }
+// ─── Error handler ────────────────────────────────────────────────────────────
 
-// Error handler
 function handleApiError(error: unknown) {
-  if (typeof error === 'object' && error !== null && 'status' in error && (error as { status?: number }).status === 429) {
+  const err = error as Record<string, unknown>;
+
+  if (err?.status === 429) {
     return NextResponse.json(
-      { confirmation: "I'm getting too many requests. Please wait a moment and try again.", error: 'rate_limit' },
+      {
+        confirmation: "I'm getting too many requests. Please wait a moment and try again.",
+        error: 'rate_limit',
+      },
       { status: 429 }
     );
   }
-  
-  if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'ENOTFOUND') {
+
+  if (err?.code === 'ENOTFOUND') {
     return NextResponse.json(
-      { confirmation: "I'm having trouble connecting to the service. Please check your internet connection.", error: 'network_error' },
+      {
+        confirmation: "I'm having trouble connecting. Please check your connection.",
+        error: 'network_error',
+      },
       { status: 503 }
     );
   }
 
   return NextResponse.json(
-    { confirmation: "I'm having technical difficulties. Please try again later.", error: 'processing_error' },
+    {
+      confirmation: "I'm having technical difficulties. Please try again later.",
+      error: 'processing_error',
+    },
     { status: 500 }
   );
 }
